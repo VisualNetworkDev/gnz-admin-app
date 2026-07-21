@@ -1,0 +1,121 @@
+name: Crear IPA GNZ para iPhone
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.44.6
+  FLUTTER_REVISION: ee80f08bbf97172ec030b8751ceab557177a34a6
+
+concurrency:
+  group: gnz-ios-unsigned-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Compilar iOS en macOS
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Obtener el codigo
+        uses: actions/checkout@v7
+
+      - name: Instalar la version exacta de Flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init "$RUNNER_TEMP/flutter"
+          git -C "$RUNNER_TEMP/flutter" remote add origin https://github.com/flutter/flutter.git
+          git -C "$RUNNER_TEMP/flutter" fetch --depth 1 origin \
+            "refs/tags/$FLUTTER_VERSION:refs/tags/$FLUTTER_VERSION"
+          git -C "$RUNNER_TEMP/flutter" checkout --detach "$FLUTTER_VERSION"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = "$FLUTTER_REVISION"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Preparar dependencias
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter config --no-analytics
+          flutter --version
+          flutter pub get
+
+      - name: Verificar el proyecto
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter analyze
+          flutter test
+
+      - name: Compilar la aplicacion sin certificados
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build ios --release --no-codesign
+
+      - name: Crear el archivo IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="build/ios/iphoneos/Runner.app"
+          test -d "$app"
+          chmod 755 "$app/Runner"
+          while IFS= read -r -d '' framework; do
+            executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$framework/Info.plist")"
+            test -n "$executable"
+            test -f "$framework/$executable"
+            chmod 755 "$framework/$executable"
+            test -x "$framework/$executable"
+          done < <(find "$app/Frameworks" -type d -name '*.framework' -print0)
+          mkdir -p build/ios/unsigned/Payload
+          cp -R "$app" build/ios/unsigned/Payload/
+          cd build/ios/unsigned
+          ditto -c -k --sequesterRsrc --keepParent Payload GNZ-Admin-Pro-iOS-unsigned.ipa
+          shasum -a 256 GNZ-Admin-Pro-iOS-unsigned.ipa > GNZ-Admin-Pro-iOS-unsigned.sha256
+
+      - name: Validar el IPA antes de entregarlo
+        shell: bash
+        run: |
+          set -euo pipefail
+          ipa="build/ios/unsigned/GNZ-Admin-Pro-iOS-unsigned.ipa"
+          verify="$RUNNER_TEMP/gnz-admin-ipa"
+          rm -rf "$verify"
+          mkdir -p "$verify"
+          ditto -x -k "$ipa" "$verify"
+          app="$verify/Payload/Runner.app"
+          test -d "$app"
+          test -x "$app/Runner"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")" = "com.gnzoilservices.gnzAdminFlutter"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist")" = "GNZ Admin Pro"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")" = "1.0.5"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" = "5"
+          file "$app/Runner" | grep -q 'arm64'
+          while IFS= read -r -d '' framework; do
+            executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$framework/Info.plist")"
+            test -x "$framework/$executable"
+            file "$framework/$executable" | grep -q 'arm64'
+          done < <(find "$app/Frameworks" -type d -name '*.framework' -print0)
+          unzip -t "$ipa"
+
+      - name: Guardar el IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: GNZ-Admin-Pro-iOS-unsigned
+          path: |
+            build/ios/unsigned/GNZ-Admin-Pro-iOS-unsigned.ipa
+            build/ios/unsigned/GNZ-Admin-Pro-iOS-unsigned.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Resumen
+        shell: bash
+        run: |
+          {
+            echo "## GNZ Admin Pro para iPhone"
+            echo
+            echo "El artefacto **GNZ-Admin-Pro-iOS-unsigned** contiene el IPA validado para instalar con AltStore."
+          } >> "$GITHUB_STEP_SUMMARY"
