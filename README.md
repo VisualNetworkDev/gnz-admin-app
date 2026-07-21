@@ -11,3 +11,7 @@ flutter build windows --release
 ```
 
 La compilacion iOS se ejecuta en GitHub Actions mediante `.github/workflows/build-ios-unsigned.yml`. El resultado es un `.ipa` sin firma preparado para instalar con AltStore.
+
+Source de AltStore:
+
+`https://raw.githubusercontent.com/VisualNetworkDev/gnz-admin-app/main/altstore-source.json`

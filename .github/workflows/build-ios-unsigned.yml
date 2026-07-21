@@ -2,9 +2,12 @@ name: Crear IPA GNZ para iPhone
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: 3.44.6
@@ -51,6 +54,19 @@ jobs:
           flutter analyze
           flutter test
 
+      - name: Leer version de la aplicacion
+        id: app_meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          full_version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+          version="${full_version%%+*}"
+          build="${full_version##*+}"
+          test -n "$version"
+          test -n "$build"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
       - name: Compilar la aplicacion sin certificados
         shell: bash
         run: |
@@ -91,8 +107,8 @@ jobs:
           test -x "$app/Runner"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")" = "com.gnzoilservices.gnzAdminFlutter"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist")" = "GNZ Admin Pro"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")" = "1.0.5"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" = "5"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")" = "${{ steps.app_meta.outputs.version }}"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" = "${{ steps.app_meta.outputs.build }}"
           file "$app/Runner" | grep -q 'arm64'
           while IFS= read -r -d '' framework; do
             executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$framework/Info.plist")"
@@ -110,6 +126,69 @@ jobs:
             build/ios/unsigned/GNZ-Admin-Pro-iOS-unsigned.sha256
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publicar la version en GitHub
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_VERSION: ${{ steps.app_meta.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "v$APP_VERSION"
+          source_ipa="build/ios/unsigned/GNZ-Admin-Pro-iOS-unsigned.ipa"
+          release_ipa="build/ios/unsigned/GNZ-Admin-Pro-$APP_VERSION.ipa"
+          release_hash="build/ios/unsigned/GNZ-Admin-Pro-$APP_VERSION.sha256"
+          cp "$source_ipa" "$release_ipa"
+          shasum -a 256 "$release_ipa" > "$release_hash"
+          gh release create "$GITHUB_REF_NAME" \
+            "$release_ipa#GNZ-Admin-Pro-$APP_VERSION.ipa" \
+            "$release_hash#GNZ-Admin-Pro-$APP_VERSION.sha256" \
+            --title "GNZ Admin Pro $APP_VERSION" \
+            --notes "Version $APP_VERSION para iPhone, validada para instalar y actualizar con AltStore."
+
+      - name: Actualizar Source de AltStore
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          APP_VERSION: ${{ steps.app_meta.outputs.version }}
+          APP_BUILD: ${{ steps.app_meta.outputs.build }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ipa="build/ios/unsigned/GNZ-Admin-Pro-$APP_VERSION.ipa"
+          size="$(stat -f%z "$ipa")"
+          date="$(date -u +%F)"
+          download_url="https://github.com/VisualNetworkDev/gnz-admin-app/releases/download/v$APP_VERSION/GNZ-Admin-Pro-$APP_VERSION.ipa"
+
+          git fetch origin main
+          git checkout -B update-altstore-source origin/main
+          temporary="$(mktemp)"
+          jq \
+            --arg version "$APP_VERSION" \
+            --arg build "$APP_BUILD" \
+            --arg date "$date" \
+            --arg downloadURL "$download_url" \
+            --argjson size "$size" \
+            '.apps[0].versions = ([{
+              version: $version,
+              buildVersion: $build,
+              date: $date,
+              localizedDescription: ("Actualizacion GNZ Admin Pro " + $version + "."),
+              downloadURL: $downloadURL,
+              size: $size,
+              minOSVersion: "13.0"
+            }] + [.apps[0].versions[] | select(.version != $version or .buildVersion != $build)])' \
+            altstore-source.json > "$temporary"
+          mv "$temporary" altstore-source.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add altstore-source.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore: publish AltStore metadata for $APP_VERSION"
+          git push origin HEAD:main
 
       - name: Resumen
         shell: bash

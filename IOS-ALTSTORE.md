@@ -21,14 +21,20 @@ Windows no ejecuta Xcode localmente. Este proyecto usa GitHub Actions con una ma
 4. Descargar el artefacto `GNZ-Admin-Pro-iOS-unsigned` cuando termine.
 5. Instalar el `.ipa` con AltStore.
 
+## Source oficial
+
+Agregar esta direccion en AltStore como Source:
+
+`https://raw.githubusercontent.com/VisualNetworkDev/gnz-admin-app/main/altstore-source.json`
+
 ## Updates con AltStore
 
-AltStore detecta updates desde un Source JSON comparando la primera entrada de `versions` con la version instalada. Para cada version nueva hay que:
+AltStore detecta updates desde un Source JSON comparando la primera entrada de `versions` con la version instalada. Para cada version nueva hay que actualizar `version` y el numero posterior a `+` en `pubspec.yaml`, crear el commit y publicar una etiqueta como `v1.0.6`. GitHub Actions se encarga de:
 
-1. Subir el nuevo `.ipa` a una URL publica.
-2. Agregar una entrada nueva al inicio del arreglo `versions`.
-3. Usar `version` igual a `CFBundleShortVersionString`.
-4. Usar `buildVersion` igual a `CFBundleVersion`.
+1. Verificar el codigo con analisis y pruebas.
+2. Compilar y validar el nuevo `.ipa`.
+3. Publicar el `.ipa` en GitHub Releases.
+4. Agregar la nueva version al inicio de `altstore-source.json`.
 
 Ejemplo:
 
@@ -48,7 +54,7 @@ Ejemplo:
           "buildVersion": "5",
           "date": "2026-07-20",
           "localizedDescription": "Primera version iPhone preparada para AltStore.",
-          "downloadURL": "https://visualnetworkdev.github.io/gnzoilservices/updates/gnz-admin-pro-ios/GNZ-Admin-Pro-1.0.5.ipa",
+          "downloadURL": "https://github.com/VisualNetworkDev/gnz-admin-app/releases/download/v1.0.5/GNZ-Admin-Pro-1.0.5.ipa",
           "minOSVersion": "13.0"
         }
       ]
