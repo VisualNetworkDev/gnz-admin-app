@@ -10,7 +10,7 @@ import 'updater.dart';
 
 typedef JsonMap = Map<String, dynamic>;
 
-const String appVersion = '1.0.5';
+const String appVersion = '1.0.6';
 const String updateManifestUrl =
     'https://visualnetworkdev.github.io/gnzoilservices/updates/gnz-admin-pro/latest.json';
 
@@ -249,10 +249,7 @@ class _AdminShellState extends State<AdminShell> {
               : null,
           drawer: compact ? Drawer(child: _buildSidebar()) : null,
           body: compact
-              ? AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: _sectionBody(),
-                )
+              ? _animatedSectionBody()
               : Row(
                   children: [
                     _buildSidebar(),
@@ -260,12 +257,7 @@ class _AdminShellState extends State<AdminShell> {
                       child: Column(
                         children: [
                           _buildTopbar(),
-                          Expanded(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
-                              child: _sectionBody(),
-                            ),
-                          ),
+                          Expanded(child: _animatedSectionBody()),
                         ],
                       ),
                     ),
@@ -394,112 +386,73 @@ class _AdminShellState extends State<AdminShell> {
   Widget _buildMobileLogin() {
     return Scaffold(
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            const SizedBox(height: 20),
-            Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(26),
-                child: Image.asset(
-                  'assets/gnz-logo.png',
-                  width: 112,
-                  height: 112,
-                  fit: BoxFit.cover,
-                ),
-              ),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) => Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 18 * (1 - value)),
+              child: child,
             ),
-            const SizedBox(height: 22),
-            const Text(
-              'GNZ Admin Pro',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF063F4C),
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Panel interno para citas, clientes, catalogo y servicios moviles.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF637174), height: 1.35),
-            ),
-            const SizedBox(height: 26),
-            _panel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _sectionHeader(
-                    'Acceso administrativo',
-                    'Entra con la clave actual del panel GNZ.',
-                  ),
-                  TextField(
-                    controller: _loginPassword,
-                    obscureText: true,
-                    onSubmitted: (_) => _login(),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.lock),
-                      labelText: 'Clave admin',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _login,
-                    icon: const Icon(Icons.login),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('Entrar al panel'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebar() {
-    final compact = _isCompact(context);
-    return Container(
-      width: compact ? double.infinity : 260,
-      color: const Color(0xFF08333D),
-      padding: EdgeInsets.fromLTRB(18, compact ? 18 : 20, 18, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+          ),
+          child: ListView(
+            padding: const EdgeInsets.all(20),
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'assets/gnz-logo.png',
-                  width: 54,
-                  height: 54,
-                  fit: BoxFit.cover,
+              const SizedBox(height: 20),
+              Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: Image.asset(
+                    'assets/gnz-logo.png',
+                    width: 112,
+                    height: 112,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
+              const SizedBox(height: 22),
+              const Text(
+                'GNZ Admin Pro',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF063F4C),
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Panel interno para citas, clientes, catalogo y servicios moviles.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF637174), height: 1.35),
+              ),
+              const SizedBox(height: 26),
+              _panel(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'GNZ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
+                    _sectionHeader(
+                      'Acceso administrativo',
+                      'Entra con la clave actual del panel GNZ.',
+                    ),
+                    TextField(
+                      controller: _loginPassword,
+                      obscureText: true,
+                      onSubmitted: (_) => _login(),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.lock),
+                        labelText: 'Clave admin',
                       ),
                     ),
-                    Text(
-                      'ADMIN PRO',
-                      style: TextStyle(
-                        color: Color(0xFFE5BE6D),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _login,
+                      icon: const Icon(Icons.login),
+                      label: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text('Entrar al panel'),
                       ),
                     ),
                   ],
@@ -507,40 +460,109 @@ class _AdminShellState extends State<AdminShell> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          _navButton(AdminSection.citas, Icons.calendar_month, 'Citas'),
-          _navButton(AdminSection.aceite, Icons.oil_barrel, 'Reservar aceite'),
-          _navButton(
-            AdminSection.frenos,
-            Icons.build_circle,
-            'Frenos / fluidos',
-          ),
-          _navButton(
-            AdminSection.tracking,
-            Icons.manage_search,
-            'Tracking cliente',
-          ),
-          _navButton(AdminSection.catalogo, Icons.inventory_2, 'Catalogo'),
-          _navButton(
-            AdminSection.seguridad,
-            Icons.admin_panel_settings,
-            'Seguridad',
-          ),
-          const Spacer(),
-          if (_hasPendingUpdate || _downloadingUpdate) ...[
-            _sidebarUpdateButton(),
-            const SizedBox(height: 10),
-          ],
-          OutlinedButton.icon(
-            onPressed: () => setState(() => _token = ''),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Color(0x447A9AA2)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    final compact = _isCompact(context);
+    return SafeArea(
+      top: compact,
+      bottom: compact,
+      child: Container(
+        width: compact ? double.infinity : 260,
+        color: const Color(0xFF08333D),
+        padding: EdgeInsets.fromLTRB(18, compact ? 18 : 20, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/gnz-logo.png',
+                    width: 54,
+                    height: 54,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'GNZ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'ADMIN PRO',
+                        style: TextStyle(
+                          color: Color(0xFFE5BE6D),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            icon: const Icon(Icons.logout),
-            label: const Text('Cerrar sesion'),
-          ),
-        ],
+            const SizedBox(height: 18),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _navButton(AdminSection.citas, Icons.calendar_month, 'Citas'),
+                  _navButton(
+                    AdminSection.aceite,
+                    Icons.oil_barrel,
+                    'Reservar aceite',
+                  ),
+                  _navButton(
+                    AdminSection.frenos,
+                    Icons.build_circle,
+                    'Frenos / fluidos',
+                  ),
+                  _navButton(
+                    AdminSection.tracking,
+                    Icons.manage_search,
+                    'Tracking cliente',
+                  ),
+                  _navButton(
+                    AdminSection.catalogo,
+                    Icons.inventory_2,
+                    'Catalogo',
+                  ),
+                  _navButton(
+                    AdminSection.seguridad,
+                    Icons.admin_panel_settings,
+                    'Seguridad',
+                  ),
+                ],
+              ),
+            ),
+            if (_hasPendingUpdate || _downloadingUpdate) ...[
+              _sidebarUpdateButton(),
+              const SizedBox(height: 10),
+            ],
+            OutlinedButton.icon(
+              onPressed: () => setState(() => _token = ''),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Color(0x447A9AA2)),
+              ),
+              icon: const Icon(Icons.logout),
+              label: const Text('Cerrar sesion'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -711,71 +733,103 @@ class _AdminShellState extends State<AdminShell> {
     };
   }
 
+  Widget _animatedSectionBody() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      reverseDuration: const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final offset = Tween<Offset>(
+          begin: const Offset(0.018, 0),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: offset, child: child),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(_section), child: _sectionBody()),
+    );
+  }
+
   Widget _busyOverlay() {
     return Positioned.fill(
       child: MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-        child: Container(
-          color: const Color(0x990B1517),
-          child: Center(
-            child: Container(
-              width: 420,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFBF6),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2D9CB)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 34,
-                    offset: Offset(0, 18),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(
-                    width: 38,
-                    height: 38,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3.5,
-                      color: Color(0xFF063F4C),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          builder: (context, value, child) =>
+              Opacity(opacity: value, child: child),
+          child: Container(
+            color: const Color(0x990B1517),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBF6),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2D9CB)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 34,
+                          offset: Offset(0, 18),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          _busyTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                        const SizedBox(
+                          width: 38,
+                          height: 38,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3.5,
                             color: Color(0xFF063F4C),
-                            decoration: TextDecoration.none,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        Text(
-                          _busyText,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF637174),
-                            decoration: TextDecoration.none,
-                            fontSize: 13,
-                            height: 1.25,
+                        const SizedBox(width: 18),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _busyTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF063F4C),
+                                  decoration: TextDecoration.none,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _busyText,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF637174),
+                                  decoration: TextDecoration.none,
+                                  fontSize: 13,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -3986,10 +4040,13 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   void _toast(String message, {bool error = false}) {
+    final compact = _isCompact(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(280, 0, 24, 24),
+        margin: compact
+            ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+            : const EdgeInsets.fromLTRB(280, 0, 24, 24),
         elevation: 10,
         duration: const Duration(seconds: 4),
         backgroundColor: error

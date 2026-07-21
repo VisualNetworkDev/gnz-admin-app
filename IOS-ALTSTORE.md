@@ -6,7 +6,7 @@ Esta carpeta ya tiene la plataforma iOS creada para la app Flutter.
 
 - Nombre visible: GNZ Admin Pro
 - Bundle ID: com.gnzoilservices.gnzAdminFlutter
-- Version actual: 1.0.5+5
+- Version actual: 1.0.6+6
 - Logo: usa `assets/gnz-logo.png` en los iconos iOS.
 
 ## Compilacion desde Windows
